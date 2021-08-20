@@ -190,7 +190,7 @@ namespace TestcaseBruteforce {
 
         static Table GetResultTable(string input, string[] outputs) {
             Table resultTable = new Table();
-            resultTable.Title = new TableTitle("[underline bold]A Testcase Has Found![/]");
+            resultTable.Title = new TableTitle("[underline bold]A Testcase Has Been Found![/]");
 
             resultTable.AddColumn(new TableColumn(new Markup("[bold]Kind[/]")).RightAligned());
             resultTable.AddColumn(new TableColumn(new Markup("[bold]Text[/]")).LeftAligned());
