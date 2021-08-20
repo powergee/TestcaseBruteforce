@@ -101,12 +101,29 @@ namespace TestcaseBruteforce {
                                 if (log.TestResults[i].Kind != ExitKind.ExitedNormally) {
                                     someAlgosFailed = true;
                                 }
+
+                                switch (log.TestResults[i].Kind) {
+                                    case ExitKind.ExceptionOccured:
+                                    case ExitKind.RuntimeErrorOccured:
+                                        log.Verdict = Verdict.RuntimeError;
+                                        break;
+                                    case ExitKind.TimeLimitExceeded:
+                                        log.Verdict = Verdict.TimeLimitExceeded;
+                                        break;
+                                    case ExitKind.MemoryLimitExceeded:
+                                        log.Verdict = Verdict.MemoryLimitExceeded;
+                                        break;
+                                }
                             }
 
-                            if (someAlgosFailed || !ValidateOutputs(log.TestOutputs)) {
+                            if (someAlgosFailed) {
                                 log.IsAccepted = false;
+                            } else if (!ValidateOutputs(log.TestOutputs)) {
+                                log.IsAccepted = false;
+                                log.Verdict = Verdict.WrongAnswer;
                             } else {
                                 log.IsAccepted = true;
+                                log.Verdict = Verdict.Accepted;
                             }
 
                             AnsiConsole.MarkupLine($"[bold]Test {++tcCount})[/] {log.GetMarkupString(log.IsAccepted != true)}");
