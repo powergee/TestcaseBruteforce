@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading;
 using System.Diagnostics;
 
@@ -13,7 +14,38 @@ namespace TestcaseBruteforce {
         int? TotalTime,
         long? TotalMemoryInBytes,
         Exception Exception
-    ) {}
+    ) {
+        public string GetMarkupString(string title, bool includeTimeAndMemory) {
+            StringBuilder builder = new StringBuilder();
+            if (!string.IsNullOrEmpty(title)) {
+                builder.Append($"[grey]{title} -[/] ");
+            }
+            builder.Append(Kind == ExitKind.ExitedNormally ? "[green]Passed[/]" : "[red]Failed[/]");
+            if (includeTimeAndMemory) {
+                builder.Append($" [grey]({TimeToMarkupString()}, {MemoryToMarkupString()})[/]");
+            }
+            return builder.ToString();
+        }
+
+        private string TimeToMarkupString() {
+            return TotalTime == null ? "[underline]-ms[/]" : $"[underline]{TotalTime.Value}ms[/]";
+        }
+
+        private string MemoryToMarkupString() {
+            if (TotalMemoryInBytes == null) {
+                return "[underline]-B[/]";
+            }
+
+            string[] units = { "B", "KB", "MB", "GB", "TB" };
+            int unitIndex = 0;
+            double bytes = (double)TotalMemoryInBytes.Value;
+            while ((long)(bytes/1024) > 0) {
+                bytes /= 1024;
+                ++unitIndex;
+            }
+            return $"[underline]{bytes.ToString("0.##")}{units[unitIndex]}[/]";
+        }
+    }
 
     class Algorithm {
         public string Command { get; set; }

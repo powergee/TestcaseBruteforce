@@ -1,10 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Threading.Tasks;
-using System.Runtime.ExceptionServices;
 using Spectre.Console;
 
 namespace TestcaseBruteforce {
@@ -80,49 +80,65 @@ namespace TestcaseBruteforce {
                     });
                 }
 
-                StatusTable status = new StatusTable(algos.Count);
-                string input = null;
-                string[] outputs = new string[algos.Count];
-                string found = null;
-                Exception excepOccured = null;
+                TestLog log = null;
+                int tcCount = 0;
+                AnsiConsole.Status()
+                    .AutoRefresh(true)
+                    .Spinner(Spinner.Known.Default)
+                    .Start($"[yellow]Running on testcase {tcCount+1}[/]", ctx => {
+                        do {
+                            log = new TestLog(algorithms.Length);
+                            log.GeneratorResult = genAlg.Execute();
+                            if (log.GeneratorResult.Kind != ExitKind.ExitedNormally) {
+                                break;
+                            }
 
-                while (found == null) {
-                    outputs = new string[algos.Count];
-                    status.AppendRow();
+                            bool someAlgosFailed = false;
+                            for (int i = 0; i < algos.Count; ++i) {
+                                algos[i].Input = log.GeneratorResult.Output;
+                                log.TestResults[i] = algos[i].Execute();
 
-                    AlgorithmResult genResult = genAlg.Execute();
-                    status.GeneratorResult = genResult;
-                    if (genResult.Kind != ExitKind.ExitedNormally) {
-                        excepOccured = genResult.Exception;
-                        break;
-                    }
-                    input = genResult.Output;
+                                if (log.TestResults[i].Kind != ExitKind.ExitedNormally) {
+                                    someAlgosFailed = true;
+                                }
+                            }
 
-                    bool errorOccured = false;
-                    foreach (var algoPair in algos.Select((Algo, Index) => (Algo, Index))) {
-                        algoPair.Algo.Input = input;
-                        AlgorithmResult algResult = algoPair.Algo.Execute();
-                        status[algoPair.Index] = algResult;
-                        outputs[algoPair.Index] = algResult.Output;
+                            if (someAlgosFailed || !ValidateOutputs(log.TestOutputs)) {
+                                log.IsAccepted = false;
+                            } else {
+                                log.IsAccepted = true;
+                            }
 
-                        if (algResult.Kind != ExitKind.ExitedNormally) {
-                            errorOccured = true;
-                            excepOccured = algResult.Exception;
-                        }
-                    }
+                            AnsiConsole.MarkupLine($"[bold]Test {++tcCount})[/] {log.GetMarkupString(log.IsAccepted != true)}");
+                            ctx.Status($"[yellow]Running on testcase {tcCount+1}[/]");
+                        } while (log.IsAccepted == true);
+                    });
 
-                    if (errorOccured || !ValidateOutputs(outputs)) {
-                        found = genResult.Output;
-                    }
-                }
-                status.Dispose();
                 AnsiConsole.WriteLine();
 
-                if (found != null) {
-                    AnsiConsole.Render(GetResultTable(input, outputs));
+                if (log.IsAccepted == false) {
+                    AnsiConsole.Render(GetResultTable(log.GeneratorResult.Output, log.TestOutputs));
+                    if (!string.IsNullOrEmpty(outPath)) {
+                        try {
+                            File.WriteAllText(outPath, log.GeneratorResult.Output);
+                            AnsiConsole.MarkupLine($"[yellow]Successfully saved a testcase. ({outPath})\n[/]");
+                        } catch (Exception e) {
+                            AnsiConsole.MarkupLine("[underline bold red]Failed to save a testcase.\n[/]");
+                            AnsiConsole.WriteException(e);
+                        }
+                    }
                 }
-                if (excepOccured != null) {
-                    ExceptionDispatchInfo.Capture(excepOccured).Throw();
+                
+                if (log.GeneratorResult.Exception != null) {
+                    AnsiConsole.Render(new Markup("[underline bold red]While executing the generator, an exception has occured.\n[/]"));
+                    AnsiConsole.WriteException(log.GeneratorResult.Exception);
+                }
+
+                for (int i = 0; i < algos.Count; ++i) {
+                    if (log.TestResults[i].Exception != null) {
+                        AnsiConsole.Render(new Markup($"[underline bold red]While executing algorithm {i+1}, an exception has occured.\n[/]"));
+                        AnsiConsole.WriteException(log.TestResults[i].Exception);
+                    }
                 }
             } catch (Exception e) {
                 AnsiConsole.Render(new Markup("[underline bold red]An exception has occured while judging.\n[/]"));
@@ -157,7 +173,7 @@ namespace TestcaseBruteforce {
 
         static Table GetResultTable(string input, string[] outputs) {
             Table resultTable = new Table();
-            resultTable.Title = new TableTitle("[underline bold]A Testcase Has Found.[/]");
+            resultTable.Title = new TableTitle("[underline bold]A Testcase Has Found![/]");
 
             resultTable.AddColumn(new TableColumn(new Markup("[bold]Kind[/]")).RightAligned());
             resultTable.AddColumn(new TableColumn(new Markup("[bold]Text[/]")).LeftAligned());
