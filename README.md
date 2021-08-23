@@ -85,6 +85,6 @@ To reproduce results below, build C++ files in `samples`.
 
 ![](images/rte.gif)
 
-### 3. Memory Limit Exceeded
+### 4. Memory Limit Exceeded
 
 ![](images/mle.gif)
