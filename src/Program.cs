@@ -89,41 +89,40 @@ namespace TestcaseBruteforce {
                         do {
                             log = new TestLog(algorithms.Length);
                             log.GeneratorResult = genAlg.Execute();
-                            if (log.GeneratorResult.Kind != ExitKind.ExitedNormally) {
-                                break;
-                            }
 
-                            bool someAlgosFailed = false;
-                            for (int i = 0; i < algos.Count; ++i) {
-                                algos[i].Input = log.GeneratorResult.Output;
-                                log.TestResults[i] = algos[i].Execute();
+                            if (log.GeneratorResult.Kind == ExitKind.ExitedNormally) {
+                                bool someAlgosFailed = false;
+                                for (int i = 0; i < algos.Count; ++i) {
+                                    algos[i].Input = log.GeneratorResult.Output;
+                                    log.TestResults[i] = algos[i].Execute();
 
-                                if (log.TestResults[i].Kind != ExitKind.ExitedNormally) {
-                                    someAlgosFailed = true;
+                                    if (log.TestResults[i].Kind != ExitKind.ExitedNormally) {
+                                        someAlgosFailed = true;
+                                    }
+
+                                    switch (log.TestResults[i].Kind) {
+                                        case ExitKind.ExceptionOccured:
+                                        case ExitKind.RuntimeErrorOccured:
+                                            log.Verdict = Verdict.RuntimeError;
+                                            break;
+                                        case ExitKind.TimeLimitExceeded:
+                                            log.Verdict = Verdict.TimeLimitExceeded;
+                                            break;
+                                        case ExitKind.MemoryLimitExceeded:
+                                            log.Verdict = Verdict.MemoryLimitExceeded;
+                                            break;
+                                    }
                                 }
 
-                                switch (log.TestResults[i].Kind) {
-                                    case ExitKind.ExceptionOccured:
-                                    case ExitKind.RuntimeErrorOccured:
-                                        log.Verdict = Verdict.RuntimeError;
-                                        break;
-                                    case ExitKind.TimeLimitExceeded:
-                                        log.Verdict = Verdict.TimeLimitExceeded;
-                                        break;
-                                    case ExitKind.MemoryLimitExceeded:
-                                        log.Verdict = Verdict.MemoryLimitExceeded;
-                                        break;
+                                if (someAlgosFailed) {
+                                    log.IsAccepted = false;
+                                } else if (!ValidateOutputs(log.TestOutputs)) {
+                                    log.IsAccepted = false;
+                                    log.Verdict = Verdict.WrongAnswer;
+                                } else {
+                                    log.IsAccepted = true;
+                                    log.Verdict = Verdict.Accepted;
                                 }
-                            }
-
-                            if (someAlgosFailed) {
-                                log.IsAccepted = false;
-                            } else if (!ValidateOutputs(log.TestOutputs)) {
-                                log.IsAccepted = false;
-                                log.Verdict = Verdict.WrongAnswer;
-                            } else {
-                                log.IsAccepted = true;
-                                log.Verdict = Verdict.Accepted;
                             }
 
                             AnsiConsole.MarkupLine($"[bold]Test {++tcCount})[/] {log.GetMarkupString(log.IsAccepted != true)}");
@@ -134,8 +133,9 @@ namespace TestcaseBruteforce {
                 AnsiConsole.WriteLine();
 
                 if (log.IsAccepted == false) {
-                    AnsiConsole.Render(GetResultTable(log.GeneratorResult.Output, log.TestOutputs));
-                    if (!string.IsNullOrEmpty(outPath)) {
+                    bool hasSavingPath = !string.IsNullOrEmpty(outPath);
+                    AnsiConsole.Render(GetResultTable(log.GeneratorResult.Output, log.TestOutputs, hasSavingPath));
+                    if (hasSavingPath) {
                         try {
                             File.WriteAllText(outPath, log.GeneratorResult.Output);
                             AnsiConsole.MarkupLine($"[yellow]Successfully saved a testcase. ({outPath})\n[/]");
@@ -152,7 +152,7 @@ namespace TestcaseBruteforce {
                 }
 
                 for (int i = 0; i < algos.Count; ++i) {
-                    if (log.TestResults[i].Exception != null) {
+                    if (log.TestResults[i] != null && log.TestResults[i].Exception != null) {
                         AnsiConsole.Render(new Markup($"[underline bold red]While executing algorithm {i+1}, an exception has occured.\n[/]"));
                         AnsiConsole.WriteException(log.TestResults[i].Exception);
                     }
@@ -188,24 +188,24 @@ namespace TestcaseBruteforce {
             return settingTable;
         }
 
-        static Table GetResultTable(string input, string[] outputs) {
+        static Table GetResultTable(string input, string[] outputs, bool hasSavingPath) {
             Table resultTable = new Table();
             resultTable.Title = new TableTitle("[underline bold]A Testcase Has Been Found![/]");
 
             resultTable.AddColumn(new TableColumn(new Markup("[bold]Kind[/]")).RightAligned());
             resultTable.AddColumn(new TableColumn(new Markup("[bold]Text[/]")).LeftAligned());
 
-            resultTable.AddRow(
-                new Markup("[bold]Input[/]"),
-                new Markup($"[green]{input}[/]")
-            );
-
             for (int i = 0; i < outputs.Length; ++i) {
                 resultTable.AddRow(
                     new Markup($"[bold]Algorithm {i+1}[/]"),
-                    new Markup($"[blue]{outputs[i]}[/]")
+                    new Markup($"[blue]{OmitLongString(outputs[i], false)}[/]")
                 );
             }
+            
+            resultTable.AddRow(
+                new Markup("[bold]Input[/]"),
+                new Markup($"[green]{(hasSavingPath ? OmitLongString(input, hasSavingPath) : input)}[/]")
+            );
 
             return resultTable;
         }
@@ -236,6 +236,13 @@ namespace TestcaseBruteforce {
                 }
             }
             return true;
+        }
+
+        static string OmitLongString(string plain, bool hasSavingPath) {
+            if (plain != null && plain.Length > 100) {
+                return $"{plain.Substring(0, 100)}...(omitted{(hasSavingPath ? ", check output file." : "")})";
+            }
+            return plain;
         }
     }
 }

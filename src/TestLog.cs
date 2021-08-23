@@ -22,7 +22,11 @@ namespace TestcaseBruteforce {
             string[] markups = new string[TestResults.Length+2];
             markups[0] = GeneratorResult.GetMarkupString("Generator", includeTimeAndMemory);
             for (int i = 0; i < TestResults.Length; ++i) {
-                markups[i+1] = TestResults[i].GetMarkupString($"Algorithm {i+1}", includeTimeAndMemory);
+                if (TestResults[i] == null) {
+                    markups[i+1] = $"[grey]Algorithm {i+1} - Skipped[/]";
+                } else {
+                    markups[i+1] = TestResults[i].GetMarkupString($"Algorithm {i+1}", includeTimeAndMemory);
+                }
             }
 
             string vdMarkup = "";

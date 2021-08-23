@@ -78,10 +78,16 @@ namespace TestcaseBruteforce {
             int? totalTime = null;
             long? totalMemoryInBytes = null;
             Exception exception = null;
+            StringBuilder outputBuffer = new StringBuilder();
 
             try {
                 process.StartInfo = startInfo;
+                process.EnableRaisingEvents = true;
+                process.OutputDataReceived += (s, e) => {
+                    outputBuffer.AppendLine(e.Data);
+                };
                 process.Start();
+                process.BeginOutputReadLine();
 
                 if (!string.IsNullOrWhiteSpace(Input)) {
                     process.StandardInput.Write(Input);
@@ -115,6 +121,7 @@ namespace TestcaseBruteforce {
                 if (!process.HasExited) {
                     process.Kill();
                 }
+                process.WaitForExit();
 
                 totalTime = (int)timer.ElapsedMilliseconds;
                 timer.Stop();
@@ -126,13 +133,13 @@ namespace TestcaseBruteforce {
                 } else if (process.ExitCode != 0) {
                     kind = ExitKind.RuntimeErrorOccured;
                 } else {
-                    output = process.StandardOutput.ReadToEnd();
+                    output = outputBuffer.ToString();
                 }
             } catch (Exception e) {
                 kind = ExitKind.ExceptionOccured;
                 exception = e;
             } finally {
-                process.Dispose();
+                process.Close();
             }
 
             return new AlgorithmResult(kind, output, totalTime, totalMemoryInBytes, exception);
