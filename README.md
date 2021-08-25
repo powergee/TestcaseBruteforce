@@ -37,10 +37,14 @@ tcbrute -g "node generator.js" -a "go algo1.go" "python algo2.py" "pypy3 algo3.p
 
 ## Install
 
-To install `tcbrute` on your local, install [dotnet 5.0](https://dotnet.microsoft.com/download/dotnet/5.0), and execute `install.sh`. It will copy executables to `/usr/local/tcbrute` and make a symbolic link at `/usr/bin/tcbrute`.
+To install `tcbrute` on your local, install [dotnet 5.0](https://dotnet.microsoft.com/download/dotnet/5.0), and follow instructions below.
+
+* Ubuntu (or similar Unix-like OS)
+
+Execute `install.sh`. It will copy executables to `/usr/local/tcbrute` and make a symbolic link at `/usr/bin/tcbrute`.
 
 ```
-sudo ./install.sh
+./install.sh
 ```
 
 After installation, you can use this program with `tcbrute`.
@@ -68,6 +72,8 @@ Options:
   --version                                 Show version information
   -?, -h, --help                            Show help and usage information
 ```
+
+To uninstall the program, Execute `uninstall.sh`. It will remove `/usr/local/tcbrute` and `/usr/bin/tcbrute` if they exist.
 
 ## Examples
 
