@@ -6,7 +6,7 @@ if test -d "/usr/local/tcbrute"; then
     sudo rm -r /usr/local/tcbrute
 fi
 
-sudo cp -r ./bin/Release/net5.0/publish /usr/local/tcbrute
+sudo cp -r ./bin/Release/net6.0/publish /usr/local/tcbrute
 echo "Executable files are copied to /usr/local/tcbrute."
 
 if ! test -f "/usr/bin/tcbrute"; then
